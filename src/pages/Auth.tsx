@@ -35,6 +35,8 @@ export default function Auth() {
       .eq("user_id", userId)
       .single();
 
+    console.log("Auth: User role is:", roles?.role);
+
     if (roles?.role === "advisor") {
       navigate("/advisor");
     } else {
@@ -55,9 +57,11 @@ export default function Auth() {
       if (error) throw error;
 
       if (data.user) {
+        console.log("Login successful for user:", data.user.id);
         await checkRoleAndRedirect(data.user.id);
       }
     } catch (error: any) {
+      console.error("Login error:", error);
       toast.error(error.message || "Failed to login");
     } finally {
       setLoading(false);
@@ -85,11 +89,20 @@ export default function Auth() {
       if (error) throw error;
 
       if (data.user) {
+        console.log("Signup successful for user:", data.user.id, "Role:", signupRole);
+        
         // Insert role
-        await supabase.from("user_roles").insert({
+        const { error: roleError } = await supabase.from("user_roles").insert({
           user_id: data.user.id,
           role: signupRole,
         });
+
+        if (roleError) {
+          console.error("Error inserting role:", roleError);
+          throw roleError;
+        }
+
+        console.log("Role inserted successfully:", signupRole);
 
         // If signing up as a student, create mock student record
         if (signupRole === "student") {
@@ -225,7 +238,10 @@ export default function Auth() {
         }
 
         toast.success("Account created successfully!");
-        await checkRoleAndRedirect(data.user.id);
+        
+        // Direct navigation based on signup role instead of querying
+        console.log("Redirecting to:", signupRole === "advisor" ? "/advisor" : "/student");
+        navigate(signupRole === "advisor" ? "/advisor" : "/student");
       }
     } catch (error: any) {
       console.error("Signup error:", error);
