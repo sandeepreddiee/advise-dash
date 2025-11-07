@@ -2,3 +2,6 @@ project_id = "urtmlhloelaofsdqxxvd"
 
 [functions.predict-risk]
 verify_jwt = false
+
+[functions.seed-data]
+verify_jwt = false
