@@ -38,25 +38,42 @@ export default function AdvisorDashboard() {
   }, []);
 
   const checkAuth = async () => {
+    console.log("AdvisorDashboard: Checking authentication...");
     const { data: { session } } = await supabase.auth.getSession();
+    
     if (!session) {
+      console.log("AdvisorDashboard: No session, redirecting to auth");
       navigate("/auth");
       return;
     }
 
-    const { data: roles } = await supabase
+    console.log("AdvisorDashboard: Session found for user:", session.user.id);
+
+    const { data: roles, error: rolesError } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", session.user.id)
       .single();
 
+    console.log("AdvisorDashboard: User role:", roles?.role);
+
+    if (rolesError) {
+      console.error("AdvisorDashboard: Error fetching role:", rolesError);
+      toast.error("Failed to verify user role");
+      setLoading(false);
+      return;
+    }
+
     if (roles?.role !== "advisor") {
+      console.log("AdvisorDashboard: User is not an advisor, redirecting to student");
       navigate("/student");
     }
   };
 
   const loadStudents = async () => {
     try {
+      console.log("AdvisorDashboard: Loading students...");
+      
       // Load students with risk scores
       const { data: studentsData, error: studentsError } = await supabase
         .from("students")
@@ -72,7 +89,12 @@ export default function AdvisorDashboard() {
         `)
         .order("name");
 
-      if (studentsError) throw studentsError;
+      console.log("AdvisorDashboard: Students loaded:", studentsData?.length);
+
+      if (studentsError) {
+        console.error("AdvisorDashboard: Error loading students:", studentsError);
+        throw studentsError;
+      }
 
       // Load attendance data
       const { data: attendanceData } = await supabase

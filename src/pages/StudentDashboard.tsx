@@ -33,19 +33,34 @@ export default function StudentDashboard() {
   }, []);
 
   const checkAuth = async () => {
+    console.log("StudentDashboard: Checking authentication...");
     const { data: { session } } = await supabase.auth.getSession();
+    
     if (!session) {
+      console.log("StudentDashboard: No session found, redirecting to auth");
       navigate("/auth");
       return;
     }
 
-    const { data: roles } = await supabase
+    console.log("StudentDashboard: Session found for user:", session.user.id);
+
+    const { data: roles, error: rolesError } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", session.user.id)
       .single();
 
+    console.log("StudentDashboard: User role:", roles?.role);
+
+    if (rolesError) {
+      console.error("StudentDashboard: Error fetching role:", rolesError);
+      toast.error("Failed to verify user role");
+      setLoading(false);
+      return;
+    }
+
     if (roles?.role !== "student") {
+      console.log("StudentDashboard: User is not a student, redirecting to advisor");
       navigate("/advisor");
       return;
     }
@@ -55,59 +70,94 @@ export default function StudentDashboard() {
 
   const loadStudentData = async (userId: string) => {
     try {
+      console.log("StudentDashboard: Loading data for user:", userId);
+      
       // Get profile and student data
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("full_name, student_id")
         .eq("id", userId)
         .single();
 
+      console.log("StudentDashboard: Profile data:", profile);
+
+      if (profileError) {
+        console.error("StudentDashboard: Profile error:", profileError);
+        throw profileError;
+      }
+
       if (profile) {
         setStudentName(profile.full_name || "Student");
 
-        if (profile.student_id) {
-          // Load student academic data
-          const { data: student } = await supabase
-            .from("students")
-            .select(`
-              cumulative_gpa,
-              risk_scores (risk_tier)
-            `)
-            .eq("student_id", profile.student_id)
-            .single();
-
-          // Load attendance
-          const { data: attendance } = await supabase
-            .from("attendance")
-            .select("attendance_pct")
-            .eq("student_id", profile.student_id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single();
-
-          // Load LMS engagement
-          const { data: lmsData } = await supabase
-            .from("lms_events")
-            .select("logins, time_on_platform_min")
-            .eq("student_id", profile.student_id)
-            .order("created_at", { ascending: false })
-            .limit(10);
-
-          const avgEngagement = lmsData && lmsData.length > 0
-            ? Math.round(lmsData.reduce((sum, e) => sum + (e.logins || 0), 0) / lmsData.length * 10)
-            : 0;
-
-          setStats({
-            gpa: student?.cumulative_gpa || 0,
-            attendance: attendance?.attendance_pct || 0,
-            engagement: avgEngagement,
-            riskTier: student?.risk_scores?.[0]?.risk_tier || "Low",
-          });
+        // Check if student is linked to a student record
+        if (!profile.student_id) {
+          console.log("StudentDashboard: No student_id linked to profile");
+          toast.error("Your account is not linked to a student record yet. Please contact your advisor.");
+          setLoading(false);
+          return;
         }
+
+        console.log("StudentDashboard: Loading data for student_id:", profile.student_id);
+
+        // Load student academic data
+        const { data: student, error: studentError } = await supabase
+          .from("students")
+          .select(`
+            cumulative_gpa,
+            risk_scores (risk_tier)
+          `)
+          .eq("student_id", profile.student_id)
+          .single();
+
+        console.log("StudentDashboard: Student data:", student);
+
+        if (studentError) {
+          console.error("StudentDashboard: Student data error:", studentError);
+        }
+
+        // Load attendance
+        const { data: attendance, error: attendanceError } = await supabase
+          .from("attendance")
+          .select("attendance_pct")
+          .eq("student_id", profile.student_id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        console.log("StudentDashboard: Attendance data:", attendance);
+
+        if (attendanceError) {
+          console.error("StudentDashboard: Attendance error:", attendanceError);
+        }
+
+        // Load LMS engagement
+        const { data: lmsData, error: lmsError } = await supabase
+          .from("lms_events")
+          .select("logins, time_on_platform_min")
+          .eq("student_id", profile.student_id)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        console.log("StudentDashboard: LMS data:", lmsData);
+
+        if (lmsError) {
+          console.error("StudentDashboard: LMS error:", lmsError);
+        }
+
+        const avgEngagement = lmsData && lmsData.length > 0
+          ? Math.round(lmsData.reduce((sum, e) => sum + (e.logins || 0), 0) / lmsData.length * 10)
+          : 0;
+
+        setStats({
+          gpa: student?.cumulative_gpa || 0,
+          attendance: attendance?.attendance_pct || 0,
+          engagement: avgEngagement,
+          riskTier: student?.risk_scores?.[0]?.risk_tier || "Low",
+        });
       }
     } catch (error: any) {
-      toast.error("Failed to load student data");
-      console.error(error);
+      console.error("StudentDashboard: Error loading data:", error);
+      toast.error("Failed to load student data: " + (error.message || "Unknown error"));
     } finally {
       setLoading(false);
     }
@@ -138,8 +188,17 @@ export default function StudentDashboard() {
           </header>
 
           <div className="p-6 space-y-6">
-            {/* Stats Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading your dashboard...</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Stats Grid */}
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 title="Current Term GPA"
                 value={stats.gpa.toFixed(2)}
@@ -221,6 +280,8 @@ export default function StudentDashboard() {
                 </ul>
               </CardContent>
             </Card>
+              </>
+            )}
           </div>
         </main>
       </div>
