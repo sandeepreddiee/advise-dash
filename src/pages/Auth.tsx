@@ -91,10 +91,144 @@ export default function Auth() {
           role: signupRole,
         });
 
+        // If signing up as a student, create mock student record
+        if (signupRole === "student") {
+          console.log("Creating mock student record...");
+          
+          // Create student record
+          const { data: studentData, error: studentError } = await supabase
+            .from("students")
+            .insert({
+              name: signupName,
+              major: "Computer Science",
+              cumulative_gpa: 3.2 + Math.random() * 0.8, // Random GPA between 3.2-4.0
+              age: 19 + Math.floor(Math.random() * 4), // Age 19-22
+              gender: "Not specified",
+              first_gen: Math.random() > 0.5,
+              credits_completed: 30 + Math.floor(Math.random() * 60),
+            })
+            .select()
+            .single();
+
+          if (studentError) {
+            console.error("Error creating student:", studentError);
+            throw studentError;
+          }
+
+          console.log("Student record created:", studentData.student_id);
+
+          // Link student to profile
+          const { error: profileUpdateError } = await supabase
+            .from("profiles")
+            .update({ student_id: studentData.student_id })
+            .eq("id", data.user.id);
+
+          if (profileUpdateError) {
+            console.error("Error linking profile:", profileUpdateError);
+            throw profileUpdateError;
+          }
+
+          // Create current term if it doesn't exist
+          let termId;
+          const { data: existingTerm } = await supabase
+            .from("terms")
+            .select("term_id")
+            .eq("term_name", "Fall 2025")
+            .single();
+
+          if (existingTerm) {
+            termId = existingTerm.term_id;
+          } else {
+            const { data: newTerm } = await supabase
+              .from("terms")
+              .insert({
+                term_name: "Fall 2025",
+                start_date: "2025-09-01",
+                weeks: 16,
+              })
+              .select()
+              .single();
+            termId = newTerm?.term_id;
+          }
+
+          // Create sample course
+          let courseId;
+          const { data: existingCourse } = await supabase
+            .from("courses")
+            .select("course_id")
+            .eq("dept", "CS")
+            .eq("level", 101)
+            .single();
+
+          if (existingCourse) {
+            courseId = existingCourse.course_id;
+          } else {
+            const { data: newCourse } = await supabase
+              .from("courses")
+              .insert({
+                dept: "CS",
+                level: 101,
+                title: "Introduction to Programming",
+              })
+              .select()
+              .single();
+            courseId = newCourse?.course_id;
+          }
+
+          // Create mock data
+          const gpa = studentData.cumulative_gpa;
+          const isHighRisk = gpa < 2.8;
+          const isMediumRisk = gpa >= 2.8 && gpa < 3.3;
+
+          // Risk score
+          await supabase.from("risk_scores").insert({
+            student_id: studentData.student_id,
+            term_id: termId,
+            risk_score: isHighRisk ? 75 : (isMediumRisk ? 50 : 20),
+            risk_tier: isHighRisk ? "High" : (isMediumRisk ? "Medium" : "Low"),
+            intervention_type: isHighRisk ? "Academic counseling recommended" : "Regular check-in",
+          });
+
+          // Attendance
+          await supabase.from("attendance").insert({
+            student_id: studentData.student_id,
+            course_id: courseId,
+            term_id: termId,
+            month: "November",
+            attendance_pct: isHighRisk ? 75 : (isMediumRisk ? 85 : 95),
+          });
+
+          // LMS events
+          for (let i = 0; i < 5; i++) {
+            await supabase.from("lms_events").insert({
+              student_id: studentData.student_id,
+              course_id: courseId,
+              term_id: termId,
+              grain: "weekly",
+              date: new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              logins: isHighRisk ? Math.floor(2 + Math.random() * 3) : Math.floor(8 + Math.random() * 7),
+              time_on_platform_min: isHighRisk ? Math.floor(30 + Math.random() * 40) : Math.floor(90 + Math.random() * 90),
+              assignments_submitted: Math.floor(Math.random() * 3),
+            });
+          }
+
+          // Financial aid
+          await supabase.from("financial_aid").insert({
+            student_id: studentData.student_id,
+            household_income_usd: 40000 + Math.floor(Math.random() * 80000),
+            scholarship_flag: Math.random() > 0.5,
+            aid_amount_usd: Math.floor(5000 + Math.random() * 15000),
+            work_hours_per_week: Math.floor(Math.random() * 20),
+          });
+
+          console.log("Mock data created successfully");
+        }
+
         toast.success("Account created successfully!");
         await checkRoleAndRedirect(data.user.id);
       }
     } catch (error: any) {
+      console.error("Signup error:", error);
       toast.error(error.message || "Failed to sign up");
     } finally {
       setLoading(false);
