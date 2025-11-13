@@ -1,73 +1,87 @@
-# Welcome to your Lovable project
+# Horizon Student Success System
 
-## Project info
+A comprehensive web-based platform designed to support academic advisors and students in monitoring and improving academic performance through data-driven insights and early intervention strategies.
 
-**URL**: https://lovable.dev/projects/13eee39d-8a68-4733-b8f2-7690c0f47262
+## Features
 
-## How can I edit this code?
+- **Role-Based Access**: Separate interfaces for advisors and students
+- **Student Performance Tracking**: Monitor GPA, attendance, and engagement metrics
+- **Risk Assessment**: Identify at-risk students with tier-based classification
+- **Intervention Management**: Track and create intervention notes
+- **Data Visualization**: Interactive charts and graphs for trend analysis
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
 
-There are several ways of editing your application.
+## Technology Stack
 
-**Use Lovable**
+- React 18 with TypeScript
+- Tailwind CSS for styling
+- React Router for navigation
+- Recharts for data visualization
+- Vite for build tooling
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/13eee39d-8a68-4733-b8f2-7690c0f47262) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
+- Node.js 18 or higher
+- npm or yarn
 
-**Use your preferred IDE**
+### Installation
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+# Install dependencies
+npm install
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
 
-**Edit a file directly in GitHub**
+## Project Structure
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+src/
+├── components/         # Reusable UI components
+├── pages/             # Page components
+├── data/              # Mock data and types
+├── lib/               # Utility functions
+└── index.css          # Global styles
+```
 
-**Use GitHub Codespaces**
+## Usage
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Advisor Dashboard
+- View all students and their performance metrics
+- Identify high-risk students requiring attention
+- Access detailed student profiles
+- Add and track intervention notes
 
-## What technologies are used for this project?
+### Student Dashboard
+- View personal academic performance
+- Track GPA trends over time
+- Access recommended actions
+- Find academic resources and support
 
-This project is built with:
+## Deployment
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions to Vercel.
 
-## How can I deploy this project?
+## Docker Support
 
-Simply open [Lovable](https://lovable.dev/projects/13eee39d-8a68-4733-b8f2-7690c0f47262) and click on Share -> Publish.
+The application includes Docker support for containerized deployment:
 
-## Can I connect a custom domain to my Lovable project?
+```bash
+# Build Docker image
+docker build -t horizon-app .
 
-Yes, you can!
+# Run container
+docker run -p 8080:80 horizon-app
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## License
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+This project is for educational purposes.
